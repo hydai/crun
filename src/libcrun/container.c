@@ -1187,13 +1187,17 @@ libcrun_configure_wasm (struct container_entrypoint_s *args, libcrun_error_t *er
 static int
 libcrun_configure_handler (struct container_entrypoint_s *args, libcrun_error_t *err)
 {
+  libcrun_warning ("DEBUG: Enter libcrun_configure_hanlder: Get run.oci.handler annotation");
   const char *annotation;
   annotation = find_annotation (args->container, "run.oci.handler");
+  libcrun_warning ("DEBUG: `run.oci.handler annotation` = `%s`", annotation);
 
   /* If rootfs is a wasm variant and runtime has wasmer support */
 #if HAVE_DLOPEN && (HAVE_WASMER || HAVE_WASMEDGE)
+  libcrun_warning ("DEBUG: HAVE_WASMEDGE enabled");
   const char *wasm_image;
   wasm_image = find_annotation (args->container, "module.wasm.image/variant");
+  libcrun_warning ("DEBUG: wasm_image from `module.wasm.image/variant` = `%s`", wasm_image);
 #endif
 
   /* Fail with EACCESS if global handler is already configured and there was a attempt to override it via spec. */
@@ -1217,6 +1221,7 @@ libcrun_configure_handler (struct container_entrypoint_s *args, libcrun_error_t 
 #if HAVE_DLOPEN && (HAVE_WASMER || HAVE_WASMEDGE)
   if (wasm_image != NULL && (strcmp (wasm_image, "compat") == 0))
     {
+      libcrun_warning ("DEBUG: Set args->context->handler to wasm.");
       args->context->handler = "wasm";
       return libcrun_configure_wasm (args, err);
     }
@@ -1235,6 +1240,7 @@ libcrun_configure_handler (struct container_entrypoint_s *args, libcrun_error_t 
 
   if (strcmp (annotation, "wasm") == 0)
     {
+      libcrun_warning ("DEBUG: If the wasm_image is not set. But the handler is set to wasm. Invoke here");
       /* set global_handler equivalent to "wasm" so that we can invoke wasmer runtime */
       args->context->handler = annotation;
       return libcrun_configure_wasm (args, err);
