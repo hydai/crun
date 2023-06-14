@@ -79,6 +79,8 @@ libwasmedge_exec (void *cookie, __attribute__ ((unused)) libcrun_container_t *co
   WasmEdge_Result (*WasmEdge_VMRunWasmFromFile) (WasmEdge_VMContext *Cxt, const char *Path, const WasmEdge_String FuncName, const WasmEdge_Value *Params, const uint32_t ParamLen, WasmEdge_Value *Returns, const uint32_t ReturnLen);
   bool (*WasmEdge_ResultOK) (const WasmEdge_Result Res);
   WasmEdge_String (*WasmEdge_StringCreateByCString) (const char *Str);
+  void (*WasmEdge_PluginLoadWithDefaultPaths) (void);
+  void (*WasmEdge_PluginLoadFromPath) (const char *Str);
   uint32_t argn = 0;
   uint32_t envn = 0;
   const char *dirs[2] = { "/:/", ".:." };
@@ -102,12 +104,15 @@ libwasmedge_exec (void *cookie, __attribute__ ((unused)) libcrun_container_t *co
   WasmEdge_VMRunWasmFromFile = dlsym (cookie, "WasmEdge_VMRunWasmFromFile");
   WasmEdge_ResultOK = dlsym (cookie, "WasmEdge_ResultOK");
   WasmEdge_StringCreateByCString = dlsym (cookie, "WasmEdge_StringCreateByCString");
+  WasmEdge_PluginLoadWithDefaultPaths = dlsym (cookie, "WasmEdge_PluginLoadWithDefaultPaths");
+  WasmEdge_PluginLoadFromPath = dlsym (cookie, "WasmEdge_PluginLoadFromPath");
 
   if (WasmEdge_ConfigureCreate == NULL || WasmEdge_ConfigureDelete == NULL || WasmEdge_ConfigureAddProposal == NULL
       || WasmEdge_ConfigureAddHostRegistration == NULL || WasmEdge_VMCreate == NULL || WasmEdge_VMDelete == NULL
       || WasmEdge_VMRegisterModuleFromFile == NULL || WasmEdge_VMGetImportModuleContext == NULL
       || WasmEdge_ModuleInstanceInitWASI == NULL || WasmEdge_VMRunWasmFromFile == NULL
-      || WasmEdge_ResultOK == NULL || WasmEdge_StringCreateByCString == NULL)
+      || WasmEdge_ResultOK == NULL || WasmEdge_StringCreateByCString == NULL
+      || WasmEdge_PluginLoadWithDefaultPaths == NULL || WasmEdge_PluginLoadFromPath == NULL)
     error (EXIT_FAILURE, 0, "could not find symbol in `libwasmedge.so.0`");
 
   configure = WasmEdge_ConfigureCreate ();
@@ -118,6 +123,11 @@ libwasmedge_exec (void *cookie, __attribute__ ((unused)) libcrun_container_t *co
   WasmEdge_ConfigureAddProposal (configure, WasmEdge_Proposal_ReferenceTypes);
   WasmEdge_ConfigureAddProposal (configure, WasmEdge_Proposal_SIMD);
   WasmEdge_ConfigureAddHostRegistration (configure, WasmEdge_HostRegistration_Wasi);
+
+  // Try to load plugins from the system paths
+  // With this, we can enable WASI-NN or any new WASI proposals.
+  WasmEdge_PluginLoadWithDefaultPaths ();
+  WasmEdge_PluginLoadFromPath ("/libwasmedgePluginWasiNN.so");
 
   vm = WasmEdge_VMCreate (configure, NULL);
   if (UNLIKELY (vm == NULL))
